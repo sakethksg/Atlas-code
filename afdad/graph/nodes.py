@@ -137,7 +137,7 @@ class NodeFactory:
         success = result.is_success
 
         self.logger.info(
-            f"Execution: {'✅ PASS' if success else '❌ FAIL'} "
+            f"Execution: {'PASS' if success else 'FAIL'} "
             f"({result.passed}/{result.total} tests)"
         )
 
@@ -319,7 +319,7 @@ class NodeFactory:
         self.collector.save_trajectory(trajectory)
 
         self.logger.info(
-            f"Repair {'✅ verified' if critic_result.get('is_valid') else '⚠️ unverified'}"
+            f"Repair {'verified' if critic_result.get('is_valid') else 'unverified'}"
         )
 
         log_metrics({"expert_called": 1, "repair_verified": int(critic_result.get("is_valid", False))})

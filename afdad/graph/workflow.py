@@ -119,7 +119,7 @@ def build_graph(cfg: DictConfig) -> Any:
 
     # ── Compile ──
     compiled = graph.compile()
-    logger.info("✅ AFDAD graph compiled successfully.")
+    logger.info("AFDAD graph compiled successfully.")
 
     return compiled
 
