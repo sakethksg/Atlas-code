@@ -1,0 +1,21 @@
+# Expert LLM configuration
+name: Qwen/Qwen2.5-Coder-32B-Instruct
+base_url: http://localhost:8000/v1
+api_key: EMPTY
+
+# vLLM server settings
+server:
+  host: 0.0.0.0
+  port: 8000
+  tensor_parallel_size: 2
+  gpu_memory_utilization: 0.45
+  max_model_len: 32768
+  dtype: auto
+  cuda_devices: "0,1"
+
+# Generation settings
+generation:
+  temperature: 0.3
+  max_tokens: 4096
+  top_p: 0.95
+  stop_sequences: []

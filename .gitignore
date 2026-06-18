@@ -1,0 +1,37 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual Environment ──
+.venv/
+venv/
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── AFDAD Outputs ──
+outputs/
+data/
+*.db
+centroids.npy
+wandb/
+
+# ── Training Artifacts ──
+checkpoints/
+*.safetensors
+*.bin
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── UV ──
+uv.lock

@@ -1,0 +1,68 @@
+defaults:
+  - model/student: student
+  - model/expert: expert
+  - training: lora
+  - experiment: default
+  - _self_
+
+# ── General ──
+project_name: afdad
+seed: 42
+output_dir: ./outputs
+data_dir: ./data
+
+# ── Execution Sandbox ──
+sandbox:
+  timeout_seconds: 30
+  max_memory_mb: 512
+  temp_dir: ${output_dir}/sandbox_tmp
+
+# ── Failure Memory ──
+failure_memory:
+  db_path: ${output_dir}/failure_memory.db
+  embedding_model: sentence-transformers/bge-large-en-v1.5
+  embedding_dim: 1024
+
+# ── Failure Clustering ──
+clustering:
+  n_clusters: 6
+  cluster_names:
+    - Syntax
+    - Runtime
+    - Logic
+    - EdgeCases
+    - AlgorithmDesign
+    - Efficiency
+  centroids_path: ${output_dir}/centroids.npy
+  min_samples_for_fit: 20
+
+# ── Trajectories ──
+trajectories:
+  buffer_capacity: 10000
+  save_dir: ${output_dir}/trajectories
+
+# ── Distillation ──
+distillation:
+  dataset_dir: ${output_dir}/distillation_dataset
+  max_seq_length: 4096
+
+# ── Evaluation ──
+evaluation:
+  benchmarks:
+    - humaneval
+    - mbpp
+  num_samples_per_task: 5
+  temperature: 0.8
+
+# ── Pipeline ──
+pipeline:
+  max_repair_attempts: 3
+  max_tasks_per_round: 164
+  num_training_rounds: 5
+
+# ── Logging ──
+logging:
+  use_wandb: true
+  wandb_project: afdad
+  wandb_entity: null
+  log_level: INFO

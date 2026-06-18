@@ -1,0 +1,24 @@
+# Student SLM configuration
+name: Qwen/Qwen2.5-Coder-1.5B-Instruct
+base_url: http://localhost:8001/v1
+api_key: EMPTY
+
+# vLLM server settings
+server:
+  host: 0.0.0.0
+  port: 8001
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.40
+  max_model_len: 8192
+  dtype: auto
+  cuda_devices: "2"
+
+# Generation settings
+generation:
+  temperature: 0.7
+  max_tokens: 2048
+  top_p: 0.95
+  stop_sequences:
+    - "\n```\n"
+    - "\nclass "
+    - "\ndef "

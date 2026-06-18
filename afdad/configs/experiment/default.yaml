@@ -1,0 +1,17 @@
+# Default Experiment Configuration
+experiment:
+  name: full_afdad
+  description: "Full AFDAD pipeline — Run 4"
+
+  # Ablation flags
+  use_agentic_repair: true
+  use_distillation: true
+  use_failure_clustering: true
+  use_adaptive_curriculum: true
+
+  # Ablation presets:
+  # Run 0 — Baseline Student: all false
+  # Run 1 — Student + Agentic Repair: use_agentic_repair=true
+  # Run 2 — Student + Agentic Repair + Distillation: use_agentic_repair=true, use_distillation=true
+  # Run 3 — Student + Distillation + Failure Clustering: use_distillation=true, use_failure_clustering=true
+  # Run 4 — Full AFDAD: all true
