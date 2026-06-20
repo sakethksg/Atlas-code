@@ -133,28 +133,27 @@ class Evaluator:
         return f"""\
 import sys
 
-# ── Generated Code ──
+# Generated Code
 {code}
 
-# ── HumanEval Test ──
+# HumanEval Test
+{test_code}
+
 passed = 0
 failed = 0
 total = 0
 
-def check(candidate):
-    global passed, failed, total
-    try:
-{_indent(test_code, 8)}
-        passed += 1
-    except AssertionError as e:
-        failed += 1
-        print(f"ASSERTION FAIL: {{e}}", file=sys.stderr)
-    except Exception as e:
-        failed += 1
-        print(f"ERROR: {{type(e).__name__}}: {{e}}", file=sys.stderr)
-    total += 1
+try:
+    check({entry_point})
+    passed += 1
+except AssertionError as e:
+    failed += 1
+    print(f"ASSERTION FAIL: {{e}}", file=sys.stderr)
+except Exception as e:
+    failed += 1
+    print(f"ERROR: {{type(e).__name__}}: {{e}}", file=sys.stderr)
+total += 1
 
-check({entry_point})
 print(f"RESULTS: passed={{passed}} failed={{failed}} total={{total}}")
 """
 

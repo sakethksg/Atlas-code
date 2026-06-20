@@ -132,14 +132,15 @@ class Sandbox:
             "import sys",
             "import traceback as tb_module",
             "",
-            "# ── Generated Code ──",
+            "# Generated Code",
             code,
             "",
         ]
 
         if test_code:
+            indented_test = "\n".join("        " + line for line in test_code.strip().split("\n"))
             parts.extend([
-                "# ── Test Code ──",
+                "# Test Code",
                 "passed = 0",
                 "failed = 0",
                 "total = 0",
@@ -147,7 +148,7 @@ class Sandbox:
                 "def check(candidate):",
                 "    global passed, failed, total",
                 "    try:",
-                f"        {test_code.strip()}",
+                indented_test,
                 "        passed += 1",
                 "    except Exception as e:",
                 "        failed += 1",

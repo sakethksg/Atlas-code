@@ -21,7 +21,7 @@ sandbox:
 # ── Failure Memory ──
 failure_memory:
   db_path: ${output_dir}/failure_memory.db
-  embedding_model: sentence-transformers/bge-large-en-v1.5
+  embedding_model: BAAI/bge-large-en-v1.5
   embedding_dim: 1024
 
 # ── Failure Clustering ──

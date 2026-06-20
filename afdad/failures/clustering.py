@@ -10,7 +10,7 @@ Persists centroids to disk for cross-session consistency.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import numpy as np
 from omegaconf import DictConfig
@@ -20,18 +20,23 @@ from sklearn.preprocessing import normalize
 from afdad.utils.logging import get_logger
 from afdad.utils.models import ClusterInfo, FailureCluster
 
+if TYPE_CHECKING:
+    from afdad.failures.encoder import FailureEncoder
+
 
 class FailureClustering:
-    """Spherical K-Means clustering for failure embeddings.
+    """Spherical K-Means failure clustering.
 
     Parameters
     ----------
     cfg:
         Clustering configuration with ``n_clusters``, ``cluster_names``,
         ``centroids_path``, and ``min_samples_for_fit``.
+    encoder:
+        Optional FailureEncoder instance for semantic anchoring.
     """
 
-    def __init__(self, cfg: DictConfig) -> None:
+    def __init__(self, cfg: DictConfig, encoder: FailureEncoder | None = None) -> None:
         self.n_clusters: int = cfg.n_clusters
         self.cluster_names: list[str] = list(cfg.cluster_names)
         self.centroids_path = Path(cfg.centroids_path)
@@ -46,6 +51,35 @@ class FailureClustering:
 
         # Try loading persisted centroids
         self._load_centroids()
+
+        # Anchor centroids if not loaded and encoder is provided
+        if self._centroids is None and encoder is not None:
+            self._init_anchored_centroids(encoder)
+
+    def _init_anchored_centroids(self, encoder: FailureEncoder) -> None:
+        """Initialise centroids by embedding semantic exemplars for each cluster."""
+        self.logger.info("Initialising semantically anchored failure clustering centroids...")
+        exemplars = [
+            "SyntaxError: invalid syntax. IndentationError: unexpected indent.",  # Syntax
+            "RuntimeError: TypeError: IndexError: list index out of range. KeyError.",  # Runtime
+            "LogicError: Wrong output. Expected result does not match actual outcome. Mismatch in return value or logic flow.",  # Logic
+            "EdgeCaseError: Failed on empty input, boundary cases, extremum limits, zero, null values, or negative numbers.",  # EdgeCases
+            "AlgorithmDesignError: Incorrect algorithm choice, suboptimal structural logic, recursion error, or strategy mismatch.",  # AlgorithmDesign
+            "EfficiencyError: TimeLimitExceeded, TimeoutError, memory limit exceeded, slow execution speed, or high complexity."  # Efficiency
+        ]
+
+        if len(exemplars) != self.n_clusters:
+            exemplars = exemplars[:self.n_clusters]
+            while len(exemplars) < self.n_clusters:
+                exemplars.append("Unknown failure pattern.")
+
+        try:
+            embeddings = encoder.encode_batch(exemplars)
+            self._centroids = normalize(embeddings)
+            self._save_centroids()
+            self.logger.info("Successfully initialised and saved anchored centroids.")
+        except Exception as exc:
+            self.logger.error(f"Failed to generate anchored centroids: {exc}. Fallback to dynamic fit later.")
 
     # ── Public API ────────────────────────────────────────────
 
@@ -102,10 +136,17 @@ class FailureClustering:
 
         embeddings_norm = normalize(embeddings)
 
+        # Use existing anchored centroids as initial centers to preserve category alignment
+        init_centers = "k-means++"
+        n_init = 10
+        if self._centroids is not None:
+            init_centers = self._centroids
+            n_init = 1
+
         self._kmeans = KMeans(
             n_clusters=self.n_clusters,
-            init="k-means++",
-            n_init=10,
+            init=init_centers,
+            n_init=n_init,
             max_iter=300,
             random_state=42,
         )

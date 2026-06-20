@@ -59,7 +59,7 @@ class NodeFactory:
 
         # ── Failure Pipeline ──
         self.encoder = FailureEncoder(cfg.failure_memory)
-        self.clustering = FailureClustering(cfg.clustering)
+        self.clustering = FailureClustering(cfg.clustering, self.encoder)
         self.memory = FailureMemory(cfg.failure_memory)
 
         # ── Trajectories ──

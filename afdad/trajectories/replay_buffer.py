@@ -82,11 +82,12 @@ class ReplayBuffer:
 
         # Compute weights based on failure rates
         weights = self._compute_weights(failure_rates)
-        indices = random.choices(
-            range(len(self._buffer)),
-            weights=weights,
-            k=n,
-        )
+        indices = np.random.choice(
+            len(self._buffer),
+            size=n,
+            replace=False,
+            p=weights,
+        ).tolist()
         return [self._buffer[i] for i in indices]
 
     def get_all(self) -> list[TrainingExample]:

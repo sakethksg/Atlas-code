@@ -25,6 +25,8 @@ class FailureEncoder:
         ``embedding_dim`` fields.
     """
 
+    INSTRUCTION = "Represent this programming traceback and source code failure for clustering error categories: "
+
     def __init__(self, cfg: DictConfig) -> None:
         self.model_name: str = cfg.embedding_model
         self.embedding_dim: int = cfg.embedding_dim
@@ -58,8 +60,9 @@ class FailureEncoder:
             1-D embedding vector of shape ``(embedding_dim,)``.
         """
         self._load_model()
+        prefixed_text = f"{self.INSTRUCTION}{text}"
         embedding = self._model.encode(
-            text, normalize_embeddings=True, show_progress_bar=False
+            prefixed_text, normalize_embeddings=True, show_progress_bar=False
         )
         return np.asarray(embedding, dtype=np.float32)
 
@@ -77,8 +80,9 @@ class FailureEncoder:
             2-D array of shape ``(len(texts), embedding_dim)``.
         """
         self._load_model()
+        prefixed_texts = [f"{self.INSTRUCTION}{t}" for t in texts]
         embeddings = self._model.encode(
-            texts,
+            prefixed_texts,
             normalize_embeddings=True,
             show_progress_bar=True,
             batch_size=32,
