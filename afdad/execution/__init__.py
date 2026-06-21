@@ -1,1 +1,1 @@
-"""Code execution sandbox and test evaluation."""
+"""Code execution and test evaluation."""

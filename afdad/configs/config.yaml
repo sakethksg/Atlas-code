@@ -12,11 +12,10 @@ seed: 42
 output_dir: ./outputs
 data_dir: ./data
 
-# ── Execution Sandbox ──
-sandbox:
+# ── Execution ──
+execution:
   timeout_seconds: 30
-  max_memory_mb: 512
-  temp_dir: ${output_dir}/sandbox_tmp
+  temp_dir: ${output_dir}/exec_tmp
 
 # ── Failure Memory ──
 failure_memory:

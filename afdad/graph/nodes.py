@@ -55,7 +55,7 @@ class NodeFactory:
         self.critic = CriticAgent(cfg.model.expert)
 
         # ── Execution ──
-        self.evaluator = Evaluator(cfg.sandbox)
+        self.evaluator = Evaluator(cfg.execution)
 
         # ── Failure Pipeline ──
         self.encoder = FailureEncoder(cfg.failure_memory)

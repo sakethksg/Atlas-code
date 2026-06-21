@@ -44,7 +44,7 @@ class TaskStatus(str, Enum):
 
 
 class ExecutionResult(BaseModel):
-    """Result from code execution in the sandbox."""
+    """Result from code execution."""
 
     passed: int = Field(default=0, description="Number of tests passed")
     failed: int = Field(default=0, description="Number of tests failed")

@@ -46,7 +46,7 @@ class MBPPRunner:
         self.logger = get_logger()
         self.planner = PlannerAgent(cfg.model.student)
         self.coder = CoderAgent(cfg.model.student)
-        self.evaluator = Evaluator(cfg.sandbox)
+        self.evaluator = Evaluator(cfg.execution)
         self.num_samples: int = cfg.evaluation.num_samples_per_task
         self.temperature: float = cfg.evaluation.temperature
 

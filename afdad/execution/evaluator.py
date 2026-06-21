@@ -1,7 +1,7 @@
 """
 Code evaluator — runs test cases against generated code and reports results.
 
-Bridges the sandbox with HumanEval/MBPP-style test formats.
+Bridges the code executor with HumanEval/MBPP-style test formats.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from typing import Any
 
 from omegaconf import DictConfig
 
-from afdad.execution.sandbox import Sandbox
+from afdad.execution.executor import CodeExecutor
 from afdad.utils.logging import get_logger
 from afdad.utils.models import ExecutionResult
 
@@ -21,12 +21,12 @@ class Evaluator:
 
     Parameters
     ----------
-    sandbox_cfg:
-        Sandbox configuration passed through to :class:`Sandbox`.
+    execution_cfg:
+        Execution configuration passed through to :class:`CodeExecutor`.
     """
 
-    def __init__(self, sandbox_cfg: DictConfig) -> None:
-        self.sandbox = Sandbox(sandbox_cfg)
+    def __init__(self, execution_cfg: DictConfig) -> None:
+        self.executor = CodeExecutor(execution_cfg)
         self.logger = get_logger()
 
     async def evaluate(
@@ -52,7 +52,7 @@ class Evaluator:
             Structured execution result.
         """
         self.logger.debug(f"Evaluating code ({len(code)} chars) with tests")
-        return await self.sandbox.execute(
+        return await self.executor.execute(
             code=code,
             test_code=test_code,
             entry_point=entry_point,
@@ -82,7 +82,7 @@ class Evaluator:
         # HumanEval tests use `check(candidate)` pattern
         # We need to construct the full test script
         full_test = self._build_humaneval_test(code, test_code, entry_point)
-        return await self.sandbox.execute(code=full_test, test_code="")
+        return await self.executor.execute(code=full_test, test_code="")
 
     async def evaluate_batch(
         self,

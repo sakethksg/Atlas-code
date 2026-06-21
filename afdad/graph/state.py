@@ -40,7 +40,7 @@ class AFDADState(TypedDict, total=False):
 
     # ── Execution ──
     execution_result: dict[str, Any]
-    """Execution result from the sandbox (serialised ExecutionResult)."""
+    """Execution result (serialised ExecutionResult)."""
 
     # ── Failure Analysis ──
     failure_description: str

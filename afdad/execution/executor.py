@@ -1,7 +1,7 @@
 """
-Code execution sandbox — runs generated code in a subprocess with isolation.
+Code executor — runs generated code in a subprocess.
 
-Provides timeout enforcement, resource limits, and stdout/stderr capture.
+Provides timeout enforcement and stdout/stderr capture.
 """
 
 from __future__ import annotations
@@ -19,18 +19,17 @@ from afdad.utils.logging import get_logger
 from afdad.utils.models import ExecutionResult
 
 
-class Sandbox:
-    """Subprocess-based sandbox for executing generated Python code.
+class CodeExecutor:
+    """Subprocess-based executor for running generated Python code.
 
     Parameters
     ----------
     cfg:
-        Sandbox configuration (timeout_seconds, max_memory_mb, temp_dir).
+        Execution configuration (timeout_seconds, temp_dir).
     """
 
     def __init__(self, cfg: DictConfig) -> None:
         self.timeout = cfg.timeout_seconds
-        self.max_memory_mb = cfg.max_memory_mb
         self.temp_dir = Path(cfg.temp_dir)
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.logger = get_logger()
@@ -41,7 +40,7 @@ class Sandbox:
         test_code: str = "",
         entry_point: str = "",
     ) -> ExecutionResult:
-        """Execute code with optional test cases in a sandboxed subprocess.
+        """Execute code with optional test cases in a subprocess.
 
         Parameters
         ----------
@@ -110,7 +109,7 @@ class Sandbox:
 
         except Exception as exc:
             elapsed = (time.perf_counter() - start_time) * 1000
-            self.logger.error(f"Sandbox execution error: {exc}")
+            self.logger.error(f"Execution error: {exc}")
             return ExecutionResult(
                 stderr=str(exc),
                 returncode=-1,
