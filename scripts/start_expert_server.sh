@@ -20,5 +20,4 @@ python -m vllm.entrypoints.openai.api_server \
     --tensor-parallel-size 2 \
     --gpu-memory-utilization 0.45 \
     --max-model-len 32768 \
-    --dtype auto \
     --trust-remote-code
