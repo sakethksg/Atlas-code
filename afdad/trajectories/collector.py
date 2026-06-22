@@ -116,6 +116,7 @@ class TrajectoryCollector:
         plan: str,
         failed_code: str,
         failure_cluster: str = "Unknown",
+        source_task_id: str | None = None,
     ) -> TrainingExample:
         """Convert a trajectory into a training example for distillation.
 
@@ -131,6 +132,8 @@ class TrajectoryCollector:
             Student's failed code.
         failure_cluster:
             Assigned failure cluster.
+        source_task_id:
+            ID of the source task.
 
         Returns
         -------
@@ -150,7 +153,10 @@ class TrajectoryCollector:
             repair_reasoning=trajectory.repair_reasoning,
             repaired_code=trajectory.repaired_code,
             failure_cluster=cluster,
+            trajectory_id=trajectory.trajectory_id,
+            source_task_id=source_task_id,
         )
+
 
     def save_trajectory(self, trajectory: RepairTrajectory) -> Path:
         """Save a trajectory to disk as JSON.

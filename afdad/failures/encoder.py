@@ -30,6 +30,7 @@ class FailureEncoder:
     def __init__(self, cfg: DictConfig) -> None:
         self.model_name: str = cfg.embedding_model
         self.embedding_dim: int = cfg.embedding_dim
+        self.batch_size: int = cfg.get("embedding_batch_size", 32)
         self.logger = get_logger()
         self._model: Any | None = None
 
@@ -85,7 +86,7 @@ class FailureEncoder:
             prefixed_texts,
             normalize_embeddings=True,
             show_progress_bar=True,
-            batch_size=32,
+            batch_size=self.batch_size,
         )
         return np.asarray(embeddings, dtype=np.float32)
 
@@ -96,6 +97,10 @@ class FailureEncoder:
         error_type: str | None,
         stderr: str,
         traceback: str,
+        task_limit: int = 200,
+        traceback_limit: int = 500,
+        stderr_limit: int = 300,
+        code_limit: int = 300,
     ) -> str:
         """Construct a structured text representation of a failure.
 
@@ -103,10 +108,10 @@ class FailureEncoder:
         string suitable for embedding.
         """
         parts = [
-            f"Task: {task[:200]}",
+            f"Task: {task[:task_limit]}",
             f"Error Type: {error_type or 'Unknown'}",
-            f"Traceback: {traceback[:500]}" if traceback else "",
-            f"Stderr: {stderr[:300]}" if stderr else "",
-            f"Code Snippet: {code[:300]}",
+            f"Traceback: {traceback[:traceback_limit]}" if traceback else "",
+            f"Stderr: {stderr[:stderr_limit]}" if stderr else "",
+            f"Code Snippet: {code[:code_limit]}",
         ]
         return "\n".join(p for p in parts if p)

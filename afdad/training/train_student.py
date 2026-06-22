@@ -35,8 +35,14 @@ class StudentTrainer:
         self.cfg = cfg
         self.logger = get_logger()
 
+        # ── Experiment flags ──
+        exp = cfg.get("experiment", {})
+        if hasattr(exp, "experiment"):
+            exp = exp.experiment
+        self._use_adaptive_curriculum: bool = exp.get("use_adaptive_curriculum", True)
+
         # Components
-        self.replay_buffer = ReplayBuffer(cfg.trajectories)
+        self.replay_buffer = ReplayBuffer(cfg.trajectories, seed=cfg.seed)
         self.clustering = FailureClustering(cfg.clustering)
         self.orchestrator = TrainingOrchestrator(
             model_cfg=cfg.model.student,
@@ -51,6 +57,12 @@ class StudentTrainer:
         # Evaluation
         self.humaneval_runner = HumanEvalRunner(cfg)
         self.mbpp_runner = MBPPRunner(cfg)
+
+        # Reporting & Tracking
+        from afdad.evaluation.reporter import ResultReporter
+        from afdad.utils.experiment import ExperimentTracker
+        self.reporter = ResultReporter(cfg.output_dir)
+        self.tracker = ExperimentTracker(cfg)
 
     async def run(self) -> dict[str, Any]:
         """Execute the full training loop.
@@ -70,6 +82,10 @@ class StudentTrainer:
         baseline_metrics = await self._evaluate(round_id=0)
         all_metrics.append({"round": 0, **baseline_metrics})
 
+        run_name = self.cfg.get("experiment", {}).get("experiment", {}).get("name", "run")
+        self.reporter.generate_report(run_name, baseline_metrics, round_id=0)
+        self.tracker.log_round(round_id=0, metrics=baseline_metrics)
+
         # ── Training rounds ──
         for round_id in range(1, num_rounds + 1):
             self.logger.info(
@@ -84,8 +100,15 @@ class StudentTrainer:
 
             # Step 2: Train student
             if len(self.replay_buffer) > 0:
-                failure_rates = self.clustering.get_failure_rates()
-                self.logger.info(f"Failure rates: {failure_rates}")
+                failure_rates = (
+                    self.clustering.get_failure_rates()
+                    if self._use_adaptive_curriculum
+                    else None
+                )
+                if failure_rates is not None:
+                    self.logger.info(f"Failure rates: {failure_rates}")
+                else:
+                    self.logger.info("Adaptive curriculum disabled — uniform sampling")
 
                 adapter_path = self.orchestrator.run_training_round(
                     failure_rates=failure_rates,
@@ -96,6 +119,11 @@ class StudentTrainer:
             # Step 3: Evaluate
             round_metrics = await self._evaluate(round_id=round_id)
             all_metrics.append({"round": round_id, **round_metrics})
+
+            # Save reporting metadata
+            dataset_stats = self.replay_buffer.get_cluster_distribution()
+            self.reporter.generate_report(run_name, round_metrics, round_id=round_id)
+            self.tracker.log_round(round_id=round_id, metrics=round_metrics, dataset_stats=dataset_stats)
 
             # Log improvement
             if len(all_metrics) >= 2:
@@ -111,6 +139,9 @@ class StudentTrainer:
 
         # Save final replay buffer
         self.replay_buffer.save()
+
+        # Save experiment summary
+        self.tracker.save_summary()
 
         return {"rounds": all_metrics}
 
@@ -175,34 +206,15 @@ class StudentTrainer:
     def _load_problems(self, max_tasks: int) -> list[dict[str, Any]]:
         """Load coding problems for the pipeline.
 
-        Uses HumanEval as the default problem source.
+        Uses the shared loader from :mod:`afdad.datasets.loaders`.
+
+        Args:
+            max_tasks: Maximum number of problems to return.
+
+        Returns:
+            List of problem dicts for pipeline processing.
         """
-        try:
-            from human_eval.data import read_problems
+        from afdad.datasets.loaders import load_humaneval_as_list
 
-            problems = read_problems()
-        except ImportError:
-            from datasets import load_dataset
+        return load_humaneval_as_list(max_tasks=max_tasks)
 
-            ds = load_dataset("openai_humaneval", split="test")
-            problems = {
-                row["task_id"]: {
-                    "task_id": row["task_id"],
-                    "prompt": row["prompt"],
-                    "entry_point": row["entry_point"],
-                    "test": row["test"],
-                }
-                for row in ds
-            }
-
-        # Convert to list and limit
-        problem_list = []
-        for task_id, p in list(problems.items())[:max_tasks]:
-            problem_list.append({
-                "task_id": task_id,
-                "prompt": p["prompt"],
-                "entry_point": p.get("entry_point", ""),
-                "test_cases": [{"test_code": p.get("test", "")}],
-            })
-
-        return problem_list

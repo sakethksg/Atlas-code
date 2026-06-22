@@ -41,7 +41,10 @@ class FailureClustering:
         self.cluster_names: list[str] = list(cfg.cluster_names)
         self.centroids_path = Path(cfg.centroids_path)
         self.min_samples: int = cfg.min_samples_for_fit
+        self.seed: int = cfg.get("seed", 42)
+        self.ema_decay: float = cfg.get("ema_decay", 0.1)
         self.logger = get_logger()
+        self.encoder = encoder
 
         self._kmeans: KMeans | None = None
         self._centroids: np.ndarray | None = None
@@ -52,9 +55,12 @@ class FailureClustering:
         # Try loading persisted centroids
         self._load_centroids()
 
-        # Anchor centroids if not loaded and encoder is provided
-        if self._centroids is None and encoder is not None:
-            self._init_anchored_centroids(encoder)
+    def _ensure_centroids(self) -> None:
+        """Ensure centroids are initialized, semantically anchoring them if needed."""
+        if self._centroids is not None:
+            return
+        if self.encoder is not None:
+            self._init_anchored_centroids(self.encoder)
 
     def _init_anchored_centroids(self, encoder: FailureEncoder) -> None:
         """Initialise centroids by embedding semantic exemplars for each cluster."""
@@ -96,6 +102,7 @@ class FailureClustering:
         str
             Cluster name.
         """
+        self._ensure_centroids()
         if self._centroids is None:
             self.logger.warning(
                 "No centroids fitted yet — returning UNKNOWN cluster"
@@ -119,6 +126,7 @@ class FailureClustering:
         embeddings:
             2-D array of shape ``(n_samples, embedding_dim)``.
         """
+        self._ensure_centroids()
         n_samples = embeddings.shape[0]
 
         if n_samples < self.min_samples:
@@ -148,7 +156,7 @@ class FailureClustering:
             init=init_centers,
             n_init=n_init,
             max_iter=300,
-            random_state=42,
+            random_state=self.seed,
         )
         self._kmeans.fit(embeddings_norm)
         self._centroids = normalize(self._kmeans.cluster_centers_)
@@ -167,12 +175,13 @@ class FailureClustering:
         new_embeddings:
             New embeddings to incorporate.
         """
+        self._ensure_centroids()
         if self._centroids is None:
             self.fit(new_embeddings)
             return
 
         new_norm = normalize(new_embeddings)
-        alpha = 0.1  # EMA decay factor
+        alpha = self.ema_decay
 
         for emb in new_norm:
             similarities = emb.reshape(1, -1) @ self._centroids.T
@@ -231,9 +240,10 @@ class FailureClustering:
             indices = np.linspace(0, n - 1, self.n_clusters, dtype=int)
             self._centroids = embeddings_norm[indices]
         else:
-            # Pad with random unit vectors
+            # Pad with random unit vectors (seeded for reproducibility)
+            rng = np.random.default_rng(self.seed)
             dim = embeddings_norm.shape[1]
-            pad = np.random.randn(self.n_clusters - n, dim).astype(np.float32)
+            pad = rng.standard_normal((self.n_clusters - n, dim)).astype(np.float32)
             pad = normalize(pad)
             self._centroids = np.vstack([embeddings_norm, pad])
 

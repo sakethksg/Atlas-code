@@ -3,12 +3,16 @@ Priority replay buffer — weighted sampling for adaptive curriculum.
 
 Oversamples training examples from higher-failure clusters,
 so the student focuses on its weakest areas.
+
+Research Significance:
+    The adaptive curriculum is a core novelty of AFDAD. By oversampling
+    from higher-failure clusters, the student is forced to focus on its
+    weakest areas, leading to more balanced failure-rate reduction.
 """
 
 from __future__ import annotations
 
 import json
-import random
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +21,7 @@ from omegaconf import DictConfig
 
 from afdad.utils.logging import get_logger
 from afdad.utils.models import TrainingExample
+from afdad.utils.reproducibility import get_seeded_rng
 
 
 class ReplayBuffer:
@@ -28,11 +33,13 @@ class ReplayBuffer:
         Trajectories configuration with ``buffer_capacity`` and ``save_dir``.
     """
 
-    def __init__(self, cfg: DictConfig) -> None:
+    def __init__(self, cfg: DictConfig, seed: int = 42) -> None:
         self.capacity: int = cfg.buffer_capacity
         self.save_dir = Path(cfg.save_dir)
         self.save_dir.mkdir(parents=True, exist_ok=True)
         self.logger = get_logger()
+        self._rng = get_seeded_rng(seed)
+        self.amplification: float = cfg.get("curriculum_amplification", 5.0)
 
         self._buffer: list[TrainingExample] = []
         self._load_buffer()
@@ -78,11 +85,14 @@ class ReplayBuffer:
         n = min(n, len(self._buffer))
 
         if failure_rates is None:
-            return random.sample(self._buffer, n)
+            indices = self._rng.choice(
+                len(self._buffer), size=n, replace=False
+            ).tolist()
+            return [self._buffer[i] for i in indices]
 
         # Compute weights based on failure rates
         weights = self._compute_weights(failure_rates)
-        indices = np.random.choice(
+        indices = self._rng.choice(
             len(self._buffer),
             size=n,
             replace=False,
@@ -110,9 +120,7 @@ class ReplayBuffer:
         for ex in self._buffer:
             cluster_name = ex.failure_cluster.value
             rate = failure_rates.get(cluster_name, 0.0)
-            # Weight = 1 + rate so that all examples have non-zero weight
-            # but higher-failure clusters are oversampled
-            weight = 1.0 + rate * 5.0  # 5x amplification factor
+            weight = 1.0 + rate * self.amplification  # configured amplification factor
             weights.append(weight)
 
         # Normalise

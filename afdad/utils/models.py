@@ -8,7 +8,7 @@ via these models. They enforce strong typing as per the spec.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -28,6 +28,17 @@ class FailureCluster(str, Enum):
     ALGORITHM_DESIGN = "AlgorithmDesign"
     EFFICIENCY = "Efficiency"
     UNKNOWN = "Unknown"
+
+    @classmethod
+    def from_string(cls, name: str) -> FailureCluster:
+        """Safe conversion from string to FailureCluster.
+
+        Returns UNKNOWN if the value is unrecognized.
+        """
+        for member in cls:
+            if member.value.lower() == name.strip().lower():
+                return member
+        return cls.UNKNOWN
 
 
 class TaskStatus(str, Enum):
@@ -171,7 +182,7 @@ class FailureRecord(BaseModel):
         default=None, description="Associated repair trajectory"
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Timestamp of failure record creation",
     )
 
@@ -200,6 +211,13 @@ class TrainingExample(BaseModel):
     weight: float = Field(
         default=1.0, description="Sampling weight for adaptive curriculum"
     )
+    trajectory_id: str | None = Field(
+        default=None, description="ID of the source trajectory"
+    )
+    source_task_id: str | None = Field(
+        default=None, description="ID of the source task"
+    )
+
 
 
 # ── Cluster Info ──────────────────────────────────────────────
@@ -251,6 +269,6 @@ class TaskResult(BaseModel):
         default=None, description="Generated training example"
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Timestamp",
     )

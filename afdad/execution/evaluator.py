@@ -28,6 +28,7 @@ class Evaluator:
     def __init__(self, execution_cfg: DictConfig) -> None:
         self.executor = CodeExecutor(execution_cfg)
         self.logger = get_logger()
+        self.max_concurrent: int = execution_cfg.get("max_concurrent_evals", 8)
 
     async def evaluate(
         self,
@@ -89,7 +90,7 @@ class Evaluator:
         codes: list[str],
         test_codes: list[str],
         entry_points: list[str] | None = None,
-        max_concurrent: int = 8,
+        max_concurrent: int | None = None,
     ) -> list[ExecutionResult]:
         """Evaluate a batch of code samples concurrently.
 
@@ -111,7 +112,8 @@ class Evaluator:
         if entry_points is None:
             entry_points = [""] * len(codes)
 
-        semaphore = asyncio.Semaphore(max_concurrent)
+        limit = max_concurrent if max_concurrent is not None else self.max_concurrent
+        semaphore = asyncio.Semaphore(limit)
 
         async def _eval_one(
             code: str, test: str, ep: str
@@ -158,7 +160,3 @@ print(f"RESULTS: passed={{passed}} failed={{failed}} total={{total}}")
 """
 
 
-def _indent(text: str, spaces: int) -> str:
-    """Indent each line of text by the given number of spaces."""
-    prefix = " " * spaces
-    return "\n".join(prefix + line for line in text.split("\n"))

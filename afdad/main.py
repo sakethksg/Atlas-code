@@ -21,8 +21,15 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import logging
+logging.logAsyncioTasks = False
 import os
 import sys
+# Disable AsyncOpenAI.__del__ and AsyncHttpxClientWrapper.__del__ to prevent C-level access violations during process shutdown on Windows
+from openai import AsyncOpenAI
+from openai._base_client import AsyncHttpxClientWrapper
+AsyncOpenAI.__del__ = lambda self: None
+AsyncHttpxClientWrapper.__del__ = lambda self: None
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +48,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 def main(cfg: DictConfig) -> None:
     """AFDAD main entrypoint."""
     from afdad.utils.logging import setup_logging, init_wandb, get_logger
+    from afdad.utils.reproducibility import seed_everything, save_experiment_snapshot
 
     # ── Setup ──
     os.makedirs(cfg.output_dir, exist_ok=True)
@@ -49,6 +57,11 @@ def main(cfg: DictConfig) -> None:
     logger.info("[bold]AFDAD — Adaptive Failure-Driven Agentic Distillation[/bold]")
     logger.info("=" * 60)
     logger.info(f"Config:\n{OmegaConf.to_yaml(cfg, resolve=True)}")
+
+    # ── Reproducibility ──
+    seed_everything(cfg.seed)
+    snapshot_path = save_experiment_snapshot(cfg, cfg.output_dir)
+    logger.info(f"Experiment snapshot saved to {snapshot_path}")
 
     # Init W&B
     wandb_run = init_wandb(cfg)
